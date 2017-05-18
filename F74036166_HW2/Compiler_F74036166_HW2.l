@@ -57,7 +57,7 @@ space       [ ]
 <COMMENT2>"*/"      {printf("\n========comment end========\n");BEGIN INITIAL;}
 <COMMENT2>\n        {printf("%s", yytext);yylineno++;line_num++;}
 
-"\""                {printf("\"\t\tQUOTATION\n");BEGIN STR;}
+"\""                {BEGIN STR;}
 <STR>"\\"           ;
 <STR>"\\\""         {printf("\"");}
 <STR>"\\\\"         {printf("\\");}
@@ -70,18 +70,18 @@ space       [ ]
 <STR>"\\v"          {printf("\v");}
 <STR>"\\\?"         {printf("\?");}
 <STR>"\\\'"         {printf("\'");}
-<STR>"\""           {printf("\t\tSTRING CONSTANT\n\"\t\tQUOTATION\n");BEGIN INITIAL;}
+<STR>"\""           {BEGIN INITIAL;return STRING;}
 <STR>.              {printf("%s", yytext);}
 
  /****Constant****/
-{digit}+            {printf("%s\t\tNUMBER\n", yytext);}
-{digit}*"."{digit}+ {printf("%s\t\tFLOATNUMBER\n", yytext);}
+{integer}           {return NUMBER;}
+{float}             {return FLOATNUM;}
 
  /****Delimiters****/
 {sem}           {
-                    return SEM;
                     type_flag = 0;
                     pre_type_flag = 0;
+                    return SEM;
                 }
 ","             {
                     printf("%s\t\tCOMMA\n", yytext);
@@ -111,21 +111,21 @@ space       [ ]
 ">="            {printf("%s\t\tRELATIONAL\n", yytext);}
 ">"             {printf("%s\t\tRELATIONAL\n", yytext);}
 "="             {
-                    return ASSIGN;
                     type_flag = 0;
+                    return ASSIGN;
                 }
 
  /****Keywords****/
  /*case-insensitive*/
 (?i:int)        {
-                    return INT;
                     type_flag = 1;
                     pre_type_flag = 1;
+                    return INT;
                 }
 (?i:double)     {
-                    return DOUBLE;
                     type_flag = 2;
                     pre_type_flag = 2;
+                    return DOUBLE;
                 }
 (?i:print)      {return PRINT;}
 (?i:if)         {printf("%s\t\tIF FUNCTION\n", yytext);}
@@ -150,24 +150,18 @@ space       [ ]
                             create_symbol();
                         insert_symbol(yytext);
                     }
+                    
+                    return ID;
                 }
 
-.               {;}
+.               {;} /*ignore*/
 
 %%
 
  /*****************Auxiliary procedures*****************/
-int main(int argc, char *argv[])
-{
-    yyin = fopen(argv[1], "r");
-    yylex();
-    return 0;
-}
 
 int yywrap(void)
 {
-    printf("\nParse over, the line number is %d.\n\n", line_num);
-    dump_symbol();
     return 1;
 }
 
