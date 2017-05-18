@@ -5,6 +5,7 @@
     #include <stdlib.h>
     #include <ctype.h>
     #include <string.h>
+    #include "y.tab.h"
 
     typedef struct _SYMBOL{
         int index;
@@ -18,6 +19,8 @@
     void insert_symbol();
     int lookup_symbol();
     void dump_symbol();
+
+    extern int yylineno;
 
     int type_flag = 0;          //default:0  int:1  double:2
     int pre_type_flag = 0;      //default:0  int:1  double:2
@@ -39,17 +42,20 @@ letter      [a-zA-Z]
 digit       [0-9]
 id          {letter}+({letter}|{digit})*
 integer     ([0-9]|-[0-9])+[0-9]*
+float       {integer}\.[0-9]+
+sem         [;]
+space       [ ]
 %%
 
  /******************Translation rule*******************/
 "//"                {printf("========comment start:========\n");BEGIN COMMENT;}
 <COMMENT>[^\n]+     {printf("%s", yytext);}
-<COMMENT>\n         {printf("\n========comment end========\n");line_num++;BEGIN INITIAL;}
+<COMMENT>\n         {printf("\n========comment end========\n");yylineno++;line_num++;BEGIN INITIAL;}
 
 "/*"                {printf("========comment start:========\n");BEGIN COMMENT2;}
 <COMMENT2>.         {printf("%s", yytext);}
 <COMMENT2>"*/"      {printf("\n========comment end========\n");BEGIN INITIAL;}
-<COMMENT2>\n        {printf("%s", yytext);line_num++;}
+<COMMENT2>\n        {printf("%s", yytext);yylineno++;line_num++;}
 
 "\""                {printf("\"\t\tQUOTATION\n");BEGIN STR;}
 <STR>"\\"           ;
@@ -72,8 +78,8 @@ integer     ([0-9]|-[0-9])+[0-9]*
 {digit}*"."{digit}+ {printf("%s\t\tFLOATNUMBER\n", yytext);}
 
  /****Delimiters****/
-";"             {
-                    printf("%s\t\tSEMICOLON\n", yytext);
+{sem}           {
+                    return SEM;
                     type_flag = 0;
                     pre_type_flag = 0;
                 }
@@ -81,21 +87,21 @@ integer     ([0-9]|-[0-9])+[0-9]*
                     printf("%s\t\tCOMMA\n", yytext);
                     type_flag = pre_type_flag;
                 }
-"("             {printf("%s\t\tLB\n", yytext);}
-")"             {printf("%s\t\tRB\n", yytext);}
+"("             {return LB;}
+")"             {return RB;}
 "{"             {printf("%s\t\tLB\n", yytext);}
 "}"             {printf("%s\t\tRB\n", yytext);}
 "["             {printf("%s\t\tLB\n", yytext);}
 "]"             {printf("%s\t\tRB\n", yytext);}
-"\n"            {line_num++;}
+"\n"            {yylineno++;line_num++;}
 " "             {}
 "\t"            {}
 
  /****Operators****/
-"+"             {printf("%s\t\tOPERATOR\n", yytext);}
-"-"             {printf("%s\t\tOPERATOR\n", yytext);}
-"*"             {printf("%s\t\tOPERATOR\n", yytext);}
-"/"             {printf("%s\t\tOPERATOR\n", yytext);}
+"+"             {return ADD;}
+"-"             {return SUB;}
+"*"             {return MUL;}
+"/"             {return DIV;}
 "^"             {printf("%s\t\tOPERATOR\n", yytext);}
 "%"             {printf("%s\t\tOPERATOR\n", yytext);}
 "<"             {printf("%s\t\tRELATIONAL\n", yytext);}
@@ -105,18 +111,26 @@ integer     ([0-9]|-[0-9])+[0-9]*
 ">="            {printf("%s\t\tRELATIONAL\n", yytext);}
 ">"             {printf("%s\t\tRELATIONAL\n", yytext);}
 "="             {
-                    printf("%s\t\tASSIGN\n", yytext);
+                    return ASSIGN;
                     type_flag = 0;
                 }
 
  /****Keywords****/
  /*case-insensitive*/
-(?i:int)        {type_flag = 1;pre_type_flag = 1;}
-(?i:double)     {type_flag = 2;pre_type_flag = 2;}
-(?i:print)      {printf("%s\t\tPRINT FUNCTION\n", yytext);}
+(?i:int)        {
+                    return INT;
+                    type_flag = 1;
+                    pre_type_flag = 1;
+                }
+(?i:double)     {
+                    return DOUBLE;
+                    type_flag = 2;
+                    pre_type_flag = 2;
+                }
+(?i:print)      {return PRINT;}
 (?i:if)         {printf("%s\t\tIF FUNCTION\n", yytext);}
 (?i:else)       {printf("%s\t\tELSE FUNCTION\n", yytext);}
-(?i:while)      {printf("%s\t\tWHILE FUNCTION\n", yytext);}
+(?i:while)      {return WHILE;}
 
  /****Identifiers****/
 {id}            {
