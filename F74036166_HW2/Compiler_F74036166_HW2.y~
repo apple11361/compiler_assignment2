@@ -14,7 +14,7 @@
     typedef struct _SYMBOL{
         int index;
         char id[100];
-        char type[10];
+        int TYPE;                   //int:1, double:2
         double val;
         struct _SYMBOL *list_next;
         struct _SYMBOL *hash_next;
@@ -22,7 +22,7 @@
 
     void yyerror(char *);
     void create_symbol();
-    void insert_symbol(char *s, char *type);
+    void insert_symbol(char *s);
     void symbol_assign(char *sym, double data);
     double lookup_symbol(char *sym);
     void dump_symbol();
@@ -86,7 +86,7 @@ Decl
                 }
                 else
                 {
-                    insert_symbol($2, $1);
+                    //insert_symbol($2);
                 }
             }
         }
@@ -101,8 +101,8 @@ Decl
                 }
                 else
                 {
-                    insert_symbol($2, $1);
-                    symbol_assign($2, $4);
+                    //insert_symbol($2);
+                    //symbol_assign($2, $4);
                 }
             }
         };
@@ -210,13 +210,13 @@ Parentheses
 
 int main(int argc, char *argv[])
 {
-    yylineno = 1;
+    yylineno = 0;
     sym_num = 0;
     create_symbol();
     yyparse();
 
 
-    printf("\nTotal lines: %d\n\n", yylineno);
+    printf("Total lines: %d\n\n", yylineno);
     dump_symbol();
     
     return 0;
@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
 void yyerror(char *s)
 {
     printf(RED);
-    printf("<ERROR> %s (line %d)\n", s, yylineno);
+    printf("<ERROR> %s (line %d)", s, yylineno);
     printf(ORIGIN);
     is_err = true;
 }
@@ -236,12 +236,12 @@ void create_symbol()
     printf("Create symbol table\n\n");
 }
 
-void insert_symbol(char *s, char *type)
+void insert_symbol(char *s)
 {
     temp = (symbol *)malloc(sizeof(symbol));
     temp->index = symbol_num++;
-    strcpy(temp->id, s);
-    strcpy(temp->type, type);
+    strcpy(temp->sym, s);
+    temp->TYPE = type_flag;
     temp->val = 0;
 
     if(!symbol_list_head)
@@ -283,9 +283,9 @@ void insert_symbol(char *s, char *type)
 
 double lookup_symbol(char *sym)
 {
-    if('a'<=sym[0] && sym[0]<='z')
-    {
-        if(!symbol_hash[sym[0]-'a'])
+    if('a'<=sym[0]<='z')
+    {printf("%s\n", sym);return -1;}
+/*        if(!symbol_hash[sym[0]-'a'])
         {
             return -1;
         }
@@ -294,7 +294,7 @@ double lookup_symbol(char *sym)
             symbol *i;
             for(i=symbol_hash[sym[0]-'a'];i!=NULL;i=i->hash_next)
             {
-                if(!strcmp(sym, i->id))
+                if(!strcmp(sym, i->sym))
                 {
                     return i->val;
                 }
@@ -313,23 +313,25 @@ double lookup_symbol(char *sym)
             symbol *i;
             for(i=symbol_hash[sym[0]-'A'];i!=NULL;i=i->hash_next)
             {
-                if(!strcmp(sym, i->id))
+                if(!strcmp(sym, i->sym))
                 {
                     return i->val;
                 }
             }
             return -1;
         }
-    }
+    }*/
 }
 
 void dump_symbol()
 {
-    printf("The symbol table :\n\n");
-    printf("ID\t\tType\t\tData\n");
+    printf("The symbol table dump:\n");
     while(symbol_list_head)
     {
-        printf("%s\t\t%s\t\t%g\n", symbol_list_head->id, symbol_list_head->type, symbol_list_head->val);
+        if(symbol_list_head->TYPE==1)
+            printf("%d\t%s\t\tint\n", symbol_list_head->index+1, symbol_list_head->sym);
+        else
+            printf("%d\t%s\t\tdouble\n", symbol_list_head->index+1, symbol_list_head->sym);
 
         symbol_list_head = symbol_list_head->list_next;
     }
@@ -342,7 +344,7 @@ void symbol_assign(char *sym, double data)
         symbol *i;
         for(i=symbol_hash[sym[0]-'a'];i!=NULL;i=i->hash_next)
         {
-            if(!strcmp(sym, i->id))
+            if(!strcmp(sym, i->sym))
             {
                 i->val = data;
                 return;
@@ -354,7 +356,7 @@ void symbol_assign(char *sym, double data)
         symbol *i;
         for(i=symbol_hash[sym[0]-'A'];i!=NULL;i=i->hash_next)
         {
-            if(!strcmp(sym, i->id))
+            if(!strcmp(sym, i->sym))
             {
                 i->val = data;
                 return;
